@@ -8,7 +8,8 @@
     "🖼️ Detailed Analysis",
     "📹 Video Summary",
     "📖 Short Story",
-    "🪄 Prompt Refine & Expand"
+    "🪄 Prompt Refine & Expand",
+    "🧪 Raw / Custom"
   ],
   "qwenvl": {
     "🖼️ Tags": "Your task is to generate a clean list of comma-separated tags for a text-to-image AI, based *only* on the visual information in the image. Limit the output to a maximum of 50 unique tags. Strictly describe visual elements like subject, clothing, environment, colors, lighting, and composition. Do not include abstract concepts, interpretations, marketing terms, or technical jargon (e.g., no 'SEO', 'brand-aligned', 'viral potential'). The goal is a concise list of visual descriptors. Avoid repeating tags.",
@@ -19,7 +20,8 @@
     "🖼️ Detailed Analysis": "Output ONLY these sections with short labels (no bullets): Subject; People (if any); Environment; Lighting; Camera/Composition; Color/Texture. In each section, write 2–4 sentences of concrete visible details. If something is not visible, write 'not visible'. No preface, no reasoning, no <think>.",
     "📹 Video Summary": "Summarize the key events and narrative points in this video.",
     "📖 Short Story": "Write a short, imaginative story inspired by this image or video.",
-    "🪄 Prompt Refine & Expand": "Refine and enhance the following user prompt for creative text-to-image generation. Keep the meaning and keywords, make it more expressive and visually rich. Output ONLY the improved prompt text (no preface, no bullets, no JSON, no <think>, no commentary)."
+    "🪄 Prompt Refine & Expand": "Refine and enhance the following user prompt for creative text-to-image generation. Keep the meaning and keywords, make it more expressive and visually rich. Output ONLY the improved prompt text (no preface, no bullets, no JSON, no <think>, no commentary).",
+    "🧪 Raw / Custom": "You are a helpful visual assistant. Follow the user's instructions exactly."
   },
   "qwen_text": {
     "translation_prompt": "You are a professional prompt translator. Return a single English paragraph (150-300 words). No prefixes, bullets, JSON, or <think>. Preserve all visual and stylistic details.",
