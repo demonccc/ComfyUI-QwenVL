@@ -5,6 +5,14 @@ The ComfyUI-QwenVL custom node integrates the powerful Qwen-VL series of vision-
 ![QwenVL_V1.1.0](https://github.com/user-attachments/assets/13e89746-a04e-41a3-9026-7079b29e149c)
 
 ## **📰 News & Updates**
+* **2026/02/08**: **v2.1.1**  Fixed compatibility for  Transformers 4.x and 5.x [[Update](https://github.com/1038lab/ComfyUI-QwenVL/blob/main/update.md#version-211-20260208)]
+
+* **2026/02/05**: **v2.1.0** Added SageAttention support with per-GPU architecture optimization, improved FP8 model handling, and automatic attention mode selection. [[Update](https://github.com/1038lab/ComfyUI-QwenVL/blob/main/update.md#version-210-20260205)]
+  * **SageAttention Support**: New attention mode with per-GPU optimized kernels (SM80, SM89, SM90, SM120)
+  * **Improved FP8 Handling**: Better support for pre-quantized FP8 models with automatic SDPA fallback
+  * **Smart Attention Selection**: Auto mode now tries Sage → Flash → SDPA for optimal performance
+  * **Progress Bar**: Added ComfyUI progress bar for model loading and generation stages
+  * **Better Memory Management**: Improved cache clearing when changing attention modes or quantization
 * **2025/12/22**: **v2.0.0** Added GGUF supported nodes and Prompt Enhancer nodes. [[Update](https://github.com/1038lab/ComfyUI-QwenVL/blob/main/update.md#version-200-20251222)]
 > [!IMPORTANT]  
 > Install llama-cpp-python before running GGUF nodes [instruction](docs/LLAMA_CPP_PYTHON_VISION_INSTALL.md)
@@ -40,6 +48,9 @@ The ComfyUI-QwenVL custom node integrates the powerful Qwen-VL series of vision-
 * **Image & Video Support**: Accepts both single images and video frame sequences as input.  
 * **Robust Error Handling**: Provides clear error messages for hardware or memory issues.  
 * **Clean Console Output**: Minimal and informative console logs during operation.
+* **SageAttention Support**: GPU-optimized attention mechanism with per-architecture kernels (Ampere, Ada, Hopper, Blackwell).
+* **Progress Bar**: Visual feedback during model loading and generation stages.
+* **Intelligent Cache Management**: Automatically clears VRAM when changing attention modes or quantization settings.
 
 ## **🚀 Installation**
 
@@ -55,6 +66,12 @@ The ComfyUI-QwenVL custom node integrates the powerful Qwen-VL series of vision-
    ```
 
 3. Restart ComfyUI.
+
+### **Optional: SageAttention Support**
+For optimal performance on supported GPUs, install SageAttention:
+```
+pip install sageattention
+```
 
 ## **🧭 Node Overview**
 
@@ -147,6 +164,7 @@ For more control, use the **"QwenVL (Advanced)"** node. This gives you access to
 | :---- | :---- | :---- | :---- | :---- |
 | **model\_name** | The Qwen-VL model to use. | Qwen3-VL-4B-Instruct | \- | Standard & Advanced |
 | **quantization** | On-the-fly quantization. Ignored for pre-quantized models (e.g., FP8). | 8-bit (Balanced) | 4-bit, 8-bit, None | Standard & Advanced |
+| **attention\_mode** | Attention mechanism: auto (Sage→Flash→SDPA), sage, flash\_attention\_2, sdpa | auto | auto, sage, flash\_attention\_2, sdpa | Standard & Advanced |
 | **preset\_prompt** | A selection of pre-defined prompts for common tasks. | "Describe this..." | Any text | Standard & Advanced |
 | **custom\_prompt** | Overrides the preset prompt if provided. |  | Any text | Standard & Advanced |
 | **max\_tokens** | Maximum number of new tokens to generate. | 1024 | 64-2048 | Standard & Advanced |
@@ -158,6 +176,7 @@ For more control, use the **"QwenVL (Advanced)"** node. This gives you access to
 | **repetition\_penalty** | Discourages repeating tokens. | 1.2 | 0.0-2.0 | Advanced Only |
 | **frame\_count** | Number of frames to sample from the video input. | 16 | 1-64 | Advanced Only |
 | **device** | Override automatic device selection. | auto | auto, cuda, cpu | Advanced Only |
+| **use\_torch\_compile** | Enable torch.compile optimization for faster inference. | False | True/False | Advanced Only |
 
 ### **💡 Quantization Options**
 
@@ -165,9 +184,20 @@ For more control, use the **"QwenVL (Advanced)"** node. This gives you access to
 | :---- | :---- | :---- | :---- | :---- | :---- |
 | None (FP16) | 16-bit Float | High | Fastest | Best | High VRAM GPUs (16GB+) |
 | 8-bit (Balanced) | 8-bit Integer | Medium | Fast | Very Good | Balanced performance (8GB+) |
-| 4-bit (VRAM-friendly) | 4-bit Integer | Low | Slower\* | Good | Low VRAM GPUs (\<8GB) |
+| 4-bit (VRAM-friendly) | 4-bit Integer | Low | Slower\* | Good | Low VRAM GPUs (<8GB) |
 
 \* **Note on 4-bit Speed**: 4-bit quantization significantly reduces VRAM usage but may result in slower performance on some systems due to the computational overhead of real-time dequantization.
+
+### **🎯 Attention Mode Guide**
+
+| Mode | Description | Best For |
+| :---- | :---- | :---- |
+| **auto** | Automatically selects best available: Sage → Flash → SDPA | Most users (recommended) |
+| **sage** | SageAttention with GPU-optimized kernels | Speed on modern GPUs (RTX 40 series, Hopper, Blackwell) |
+| **flash\_attention\_2** | Flash Attention 2 | Speed when Sage unavailable |
+| **sdpa** | PyTorch SDPA (default) | Compatibility, FP8/BitsAndBytes models |
+
+**Note**: FP8 models and BitsAndBytes quantization automatically use SDPA regardless of selection.
 
 ### **🤔 Setting Tips**
 
@@ -175,7 +205,8 @@ For more control, use the **"QwenVL (Advanced)"** node. This gives you access to
 | :---- | :---- |
 | **Model Choice** | For most users, Qwen3-VL-4B-Instruct is a great starting point. If you have a 40-series GPU, try the \-FP8 version for better performance. |
 | **Memory Mode** | Keep keep\_model\_loaded enabled (True) for the best performance if you plan to run the node multiple times. Disable it only if you are running out of VRAM for other nodes. |
-| **Quantization** | Start with the default 8-bit. If you have plenty of VRAM (\>16GB), switch to None (FP16) for the best speed and quality. If you are low on VRAM, use 4-bit. |
+| **Quantization** | Start with the default 8-bit. If you have plenty of VRAM (>16GB), switch to None (FP16) for the best speed and quality. If you are low on VRAM, use 4-bit. |
+| **Attention Mode** | Use "auto" for best performance. SageAttention provides fastest inference on supported GPUs. |
 | **Performance** | The first time a model is loaded with a specific quantization, it may be slow. Subsequent runs (with keep\_model\_loaded enabled) will be much faster. |
 
 ## **🧠 About Model**
@@ -183,6 +214,19 @@ For more control, use the **"QwenVL (Advanced)"** node. This gives you access to
 This node utilizes the Qwen-VL series of models, developed by the Qwen Team at Alibaba Cloud. These are powerful, open-source large vision-language models (LVLMs) designed to understand and process both visual and textual information, making them ideal for tasks like detailed image and video description.
 
 ## **🗺️ Roadmap**
+
+### **✅ Completed (v2.1.0)**
+
+* ✅ SageAttention support with per-GPU architecture optimization
+* ✅ Improved FP8 model handling with automatic SDPA fallback
+* ✅ Smart attention selection (auto: Sage → Flash → SDPA)
+* ✅ Progress bar for model loading and generation
+* ✅ Better memory management and cache clearing
+
+### **✅ Completed (v2.0.0)**
+
+* ✅ GGUF model support via llama.cpp backend
+* ✅ Prompt Enhancer nodes for text-only optimization
 
 ### **✅ Completed (v1.0.0)**
 
@@ -198,6 +242,7 @@ This node utilizes the Qwen-VL series of models, developed by the Qwen Team at A
 * **Qwen Team**: [Alibaba Cloud](https://github.com/QwenLM) \- For developing and open-sourcing the powerful Qwen-VL models.  
 * **ComfyUI**: [comfyanonymous](https://github.com/comfyanonymous/ComfyUI) \- For the incredible and extensible ComfyUI platform.  
 * **llama-cpp-python**: [JamePeng/llama-cpp-python](https://github.com/JamePeng/llama-cpp-python) \- GGUF backend with vision support used by the GGUF nodes.  
+* **SageAttention**: [SageAttention](https://github.com/thu-ml/SageAttention) \- Efficient attention implementation with GPU-optimized kernels.
 * **ComfyUI Integration**: [1038lab](https://github.com/1038lab) \- Developer of this custom node.
 
 ## **📜 License**
